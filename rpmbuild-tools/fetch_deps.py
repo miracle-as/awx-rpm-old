@@ -1,6 +1,7 @@
 #!/opt/rh/rh-python36/root/bin/python3
 import subprocess
 import os
+import shutil
 from collections import deque
 
 import re
@@ -35,13 +36,18 @@ def get_best_package(package_name, specifier=''):
     cand = finder.find_best_candidate(package_name, SpecifierSet(specifier))
     return cand.best_candidate.name, cand.best_candidate.version, cand.best_candidate.link.url
 
-def download(package):
-    subprocess.check_call(['curl', '-s', '-O', package], stdout=open(os.devnull, 'wb'))
-
 def download_best_package(package_name, specifier=''):
     name, version, url = get_best_package(package_name, specifier)
     url_split = url.split('#sha256')[0]
-    download(url_split)
+    file_split = url_split.split('/')[-1]
+    dest = str(name)+ "/" +str(file_split)
+    r = requests.get(url_split, allow_redirects=True)
+    open(dest, 'wb').write(r.content)
+    unpack_files(dest)
+
+def unpack_files(dest):
+    dest_dir = dest.split('/')[0]
+    shutil.unpack_archive(dest, dest_dir)
 
 def get_package_info(package):
     url = 'https://pypi.python.org/pypi/' + package + '/json'
@@ -75,6 +81,8 @@ Returns a list of dependencies for a package
 
 def get_dependencies_of(package):
     data = get_package_info(package.name)
+    if not os.path.exists(package.name):
+        os.makedirs(package.name)
     download_best_package(package.name, ''.join(package.specs[0]) if package.specs else '')
     dependencies = data['info']['requires_dist']
 
