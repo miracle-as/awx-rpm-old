@@ -2,6 +2,7 @@
 import subprocess
 import os
 import shutil
+import json
 from collections import deque
 
 import re
@@ -123,10 +124,51 @@ if __name__ == "__main__":
 
         dependencies = get_dependencies_of(req)
 
+#        pkg_name = (f'{req.name}')
+#        pkg_operator = (f'{req.specs[0][0]}' if req.specs else '')
+#        pkg_version = (f'{req.specs[0][1]}' if req.specs else f'')
+#        packages = []
+#
+#        pkg_json = {
+#            'Package': pkg_name,
+#            'Operator': pkg_operator,
+#            'Version': pkg_version
+#        }
+# 
+#        packages.append(pkg_json)
+#        print(packages)
+
+            
+#        output_format = '{{ "File": "{filename}", "Success": {success}, "ErrorMessage": "{error_msg}" }}'
+#        j = '{{"id": {0},"title": {1},"completed:" {2}}}'
         print(f'{req.name}{req.specs[0][0]}{req.specs[0][1]}' if req.specs else f'{req.name}')
+#        print output_format.format({filename='req.name',
+#                                   success='{req.specs[0][0]}',
+#                                   error_msg='{req.specs[0][1]}'})
+#        print( json.dumps([{'Package': {'Name': req.name,
+#                                        'Operator': req.specs[0][0],
+#                                        'Version': req.specs[0][1]}
+#                                            for dependency in dependencies:
+#                                                print( json.dumps(
+#                                                      {'Dependencies':
+#                                                        {'Name': dependency.name,
+#                                                         'Operator': dependency.specs[0][0],
+#                                                         'Version': dependency.specs[0][1]}})}
+#                          ])
+#             )
         for dependency in dependencies:
             print(f'\t{dependency.name}{dependency.specs[0][0]}{dependency.specs[0][1]}' if dependency.specs else f'\t{dependency.name}')
-
+#            deps = []
+#            dep_name = (f'{dependency.name}')
+#            dep_operator = (f'{dependency.specs[0][0]}' if dependency.specs else '')
+#            dep_version = (f'{dependency.specs[0][1]}' if dependency.specs else '')
+#
+#            dep_json = {
+#                'Dependency': dep_name,
+#                'Operator': dep_operator,
+#                'Version': dep_version
+#            }
+            
             # Only add new dependencies to queue
             if not dependency.name in known_packages:
                 work_queue.append(dependency)

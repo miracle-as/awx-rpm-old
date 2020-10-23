@@ -157,10 +157,12 @@ def _install_setup_requires(attrs):
 
     # Honor setup.cfg's options.
     dist.parse_config_files()
+    if dist.setup_requires:
+        print(f"{attrs.get('name')} had extra setup requires")
 
     with open('parsed.txt', 'w') as fp:
         fp.write('\n'.join(dist.setup_requires))
-
+        fp.close()
 
 def setup(**attrs):
     # Make sure we have any requirements needed to interpret 'attrs'.
