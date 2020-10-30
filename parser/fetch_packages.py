@@ -1,5 +1,4 @@
 import json
-import pprint
 import re
 from collections import deque
 
@@ -16,6 +15,7 @@ from pip._vendor.packaging.specifiers import SpecifierSet
 SOURCE_URL = 'https://raw.githubusercontent.com/ansible/awx/devel/requirements/requirements.txt'
 
 pypi_session = requests.sessions.Session()
+
 
 # unused
 def get_best_package(package_name, specifier=''):
@@ -43,6 +43,7 @@ def get_package_info(package):
     response = pypi_session.get(url, allow_redirects=True)
     data = response.json()
     return data
+
 
 # fetch requirements.txt
 def fetch_all_from_source():
@@ -81,7 +82,7 @@ def fetch_pkg_dependencies(pkg_name):
     return to_return
 
 
-def fetch_all():
+def fetch_all_inc_deps():
     work_queue = deque()
     known_packages = set()  # Packages we all-ready know
     all_packages = fetch_all_from_source()
@@ -106,37 +107,53 @@ def fetch_all():
 
     return fetched_list
 
+
 def _condense_dependencies(fetched_list, facit):
     packages = {}
-    for pkg in facit:
+    for pkg in facit:  # add known packages with definite versions to dict
         packages[pkg['name']] = {'name': pkg['name'], 'definite_version': pkg['version'], 'required_by': {}}
 
     for pkg in fetched_list:
-        if pkg['name'] not in packages:
+        if pkg['name'] not in packages:  # most likely a dependency if it is not in the list
             packages[pkg['name']] = {'name': pkg['name'], 'dependencies': pkg['dependencies'], 'required_by': {}}
-        else:
+        else:  # otherwise add the dependencies to the existing package in the dict
             packages[pkg['name']]['dependencies'] = pkg['dependencies']
 
         for dep in pkg['dependencies']:
             dep_name = dep['name']
 
             if dep_name not in packages:
+                # notice, this is what the package WANTS of the dependency
                 packages[dep_name] = {'name': dep_name, 'required_by': {pkg['name']: dep['specifier'] + dep['version']}}
             else:
+                # notice, this is what the package WANTS of the dependency
                 packages[dep_name]['required_by'][pkg['name']] = dep['specifier'] + dep['version']
 
     return packages
 
 
+def set_definite_versions(condensed):
+    for pkg_name in condensed:
+        package = condensed[pkg_name]
+        if 'definite_version' in package:
+            continue
+
+        specifier = ''
+        for ver in package['required_by'].values():
+            specifier += ver + ','
+        best_pkg = get_best_package(pkg_name, specifier)
+        condensed[pkg_name]['definite_version'] = best_pkg[1].base_version
+
+
 if __name__ == '__main__':
-    with open('fetched_all.json', 'w') as fp:
-        fetched_all = fetch_all()
-        json.dump(fetched_all, fp, indent=4)
+    # with open('fetched_all.json', 'w') as fp:
+    #     fetched_all = fetch_all_inc_deps()
+    #     json.dump(fetched_all, fp, indent=4)
 
     facit = fetch_all_from_source()
     with open('fetched_all.json', 'r') as fp:
         loaded = fp.read()
         fetched_list = json.loads(loaded.lower())
         condensed = _condense_dependencies(fetched_list, facit)
-        with open('out.json', 'w') as out:
-            json.dump(condensed, out, indent=4)
+        set_definite_versions(condensed)
+        print(condensed)
