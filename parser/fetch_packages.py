@@ -82,10 +82,9 @@ def fetch_pkg_dependencies(pkg_name):
     return to_return
 
 
-def fetch_all_inc_deps():
+def fetch_all_inc_deps(all_packages):
     work_queue = deque()
     known_packages = set()  # Packages we all-ready know
-    all_packages = fetch_all_from_source()
     for pkg in all_packages:
         work_queue.append(pkg)
         known_packages.add(pkg['name'])
@@ -132,7 +131,7 @@ def _condense_dependencies(fetched_list, facit):
     return packages
 
 
-def set_definite_versions(condensed):
+def _set_definite_versions(condensed):
     for pkg_name in condensed:
         package = condensed[pkg_name]
         if 'definite_version' in package:
@@ -145,15 +144,25 @@ def set_definite_versions(condensed):
         condensed[pkg_name]['definite_version'] = best_pkg[1].base_version
 
 
-if __name__ == '__main__':
-    # with open('fetched_all.json', 'w') as fp:
-    #     fetched_all = fetch_all_inc_deps()
-    #     json.dump(fetched_all, fp, indent=4)
+def fetch_all_requirements_reqs():
+    all_packages = fetch_all_from_source()
+    fetched_all = fetch_all_inc_deps(all_packages)
+    condensed = _condense_dependencies(fetched_all, all_packages)
+    _set_definite_versions(condensed)
+    return condensed
 
-    facit = fetch_all_from_source()
-    with open('fetched_all.json', 'r') as fp:
-        loaded = fp.read()
-        fetched_list = json.loads(loaded.lower())
-        condensed = _condense_dependencies(fetched_list, facit)
-        set_definite_versions(condensed)
-        print(condensed)
+
+if __name__ == '__main__':
+    res = fetch_all_requirements_reqs()
+
+    with open('fetched_all.json', 'w') as fp:
+        json.dump(res, fp, indent=4)
+
+    # facit = fetch_all_from_source()
+    # with open('fetched_all.json', 'r') as fp:
+    #     loaded = fp.read()
+    #     fetched_list = json.loads(loaded.lower())
+    #     condensed = _condense_dependencies(fetched_list, facit)
+    #     set_definite_versions(condensed)
+    #     with open('out.json', 'w') as out:
+    #         json.dump(condensed, out, indent=4)
