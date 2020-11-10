@@ -1,6 +1,6 @@
 import json
-import pprint
 import re
+import shutil
 from collections import deque
 
 import requests
@@ -17,7 +17,12 @@ SOURCE_URL = 'https://raw.githubusercontent.com/ansible/awx/devel/requirements/r
 
 pypi_session = requests.sessions.Session()
 
-# unused
+
+def unpack_files(dest):
+    dest_dir = dest.split('/')[0]
+    shutil.unpack_archive(dest, dest_dir)
+
+
 def get_best_package(package_name, specifier=''):
     allow_yanked = True
     ignore_requires_python = True
@@ -38,11 +43,22 @@ def get_best_package(package_name, specifier=''):
     return cand.best_candidate.name, cand.best_candidate.version, cand.best_candidate.link.url
 
 
+def download_best_package(package_name, specifier=''):
+    name, version, url = get_best_package(package_name, specifier)
+    url_split = url.split('#sha256')[0]
+    file_split = url_split.split('/')[-1]
+    dest = str(name) + "/" + str(file_split)
+    r = requests.get(url_split, allow_redirects=True)
+    open(dest, 'wb').write(r.content)
+    unpack_files(dest)
+
+
 def get_package_info(package):
     url = 'https://pypi.python.org/pypi/' + package + '/json'
     response = pypi_session.get(url, allow_redirects=True)
     data = response.json()
     return data
+
 
 # fetch requirements.txt
 def fetch_all_from_source():
@@ -74,9 +90,6 @@ def fetch_pkg_dependencies(pkg_name):
                 continue
             spec, ver = parsed.specs[0] if parsed.specs else ('', '')
             to_return.append({'name': parsed.name, 'version': ver, 'specifier': spec})
-            # res = fetch_pkg_dependencies(parsed.name, spec, ver, outer=False)
-            # for r in res:
-            #     to_return.append(r)
 
     return to_return
 
@@ -105,6 +118,7 @@ def fetch_all():
                 known_packages.add(dep['name'])
 
     return fetched_list
+
 
 def _condense_dependencies(fetched_list, facit):
     packages = {}
@@ -138,5 +152,5 @@ if __name__ == '__main__':
         loaded = fp.read()
         fetched_list = json.loads(loaded.lower())
         condensed = _condense_dependencies(fetched_list, facit)
-        with open('out.json', 'w') as out:
+        with open('requires.json', 'w') as out:
             json.dump(condensed, out, indent=4)

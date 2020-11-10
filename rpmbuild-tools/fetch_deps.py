@@ -1,11 +1,10 @@
 #!/opt/rh/rh-python36/root/bin/python3
-import subprocess
 import os
+import re
 import shutil
-import json
+import subprocess
 from collections import deque
 
-import re
 import requests
 import requirements
 from pip._internal.index.collector import LinkCollector
@@ -17,6 +16,7 @@ from pip._internal.network.session import PipSession
 from pip._vendor.packaging.specifiers import SpecifierSet
 
 pypi_session = requests.sessions.Session()
+
 
 def get_best_package(package_name, specifier=''):
     allow_yanked = True
@@ -37,18 +37,21 @@ def get_best_package(package_name, specifier=''):
     cand = finder.find_best_candidate(package_name, SpecifierSet(specifier))
     return cand.best_candidate.name, cand.best_candidate.version, cand.best_candidate.link.url
 
+
 def download_best_package(package_name, specifier=''):
     name, version, url = get_best_package(package_name, specifier)
     url_split = url.split('#sha256')[0]
     file_split = url_split.split('/')[-1]
-    dest = str(name)+ "/" +str(file_split)
+    dest = str(name) + "/" + str(file_split)
     r = requests.get(url_split, allow_redirects=True)
     open(dest, 'wb').write(r.content)
     unpack_files(dest)
 
+
 def unpack_files(dest):
     dest_dir = dest.split('/')[0]
     shutil.unpack_archive(dest, dest_dir)
+
 
 def get_package_info(package):
     url = 'https://pypi.python.org/pypi/' + package + '/json'
@@ -62,9 +65,11 @@ def get_package_info(package):
     return data
     print(data)
 
+
 """
 Try to get a sane version from a list of specs or just return False 
 """
+
 
 def version_from_specs(specs):
     version = specs[0][1] if len(specs) > 0 and specs[0][0] == "==" else False
@@ -76,9 +81,11 @@ def version_from_specs(specs):
 
     return version
 
+
 """
 Returns a list of dependencies for a package
 """
+
 
 def get_dependencies_of(package):
     data = get_package_info(package.name)
@@ -95,19 +102,23 @@ def get_dependencies_of(package):
             if 'extra' in parsed.line:
                 continue
 
-            if 'python_version' in parsed.line and 3.6 >= float(re.split('\'|"', parsed.line.split('python_version')[1])[1]):
+            if 'python_version' in parsed.line and 3.6 >= float(
+                    re.split('\'|"', parsed.line.split('python_version')[1])[1]):
                 continue
 
             to_return.append(parsed)
     return to_return
 
+
 if __name__ == "__main__":
-    work_queue = deque()    # Queue of packages to get dependencies of
+    work_queue = deque()  # Queue of packages to get dependencies of
     known_packages = set()  # Packages we all-ready know
 
     # Fetch latest reqiurements.txt from official awx repo
-    subprocess.check_call(['curl', '-s', '-O', 'https://raw.githubusercontent.com/ansible/awx/devel/requirements/requirements.txt'], stdout=open(os.devnull, 'wb'))
-    
+    subprocess.check_call(
+        ['curl', '-s', '-O', 'https://raw.githubusercontent.com/ansible/awx/devel/requirements/requirements.txt'],
+        stdout=open(os.devnull, 'wb'))
+
     # Populate queue with initial list of packages
     with open("requirements.txt") as fp:
         for req in requirements.parse(fp):
@@ -124,51 +135,51 @@ if __name__ == "__main__":
 
         dependencies = get_dependencies_of(req)
 
-#        pkg_name = (f'{req.name}')
-#        pkg_operator = (f'{req.specs[0][0]}' if req.specs else '')
-#        pkg_version = (f'{req.specs[0][1]}' if req.specs else f'')
-#        packages = []
-#
-#        pkg_json = {
-#            'Package': pkg_name,
-#            'Operator': pkg_operator,
-#            'Version': pkg_version
-#        }
-# 
-#        packages.append(pkg_json)
-#        print(packages)
+        #        pkg_name = (f'{req.name}')
+        #        pkg_operator = (f'{req.specs[0][0]}' if req.specs else '')
+        #        pkg_version = (f'{req.specs[0][1]}' if req.specs else f'')
+        #        packages = []
+        #
+        #        pkg_json = {
+        #            'Package': pkg_name,
+        #            'Operator': pkg_operator,
+        #            'Version': pkg_version
+        #        }
+        #
+        #        packages.append(pkg_json)
+        #        print(packages)
 
-            
-#        output_format = '{{ "File": "{filename}", "Success": {success}, "ErrorMessage": "{error_msg}" }}'
-#        j = '{{"id": {0},"title": {1},"completed:" {2}}}'
+        #        output_format = '{{ "File": "{filename}", "Success": {success}, "ErrorMessage": "{error_msg}" }}'
+        #        j = '{{"id": {0},"title": {1},"completed:" {2}}}'
         print(f'{req.name}{req.specs[0][0]}{req.specs[0][1]}' if req.specs else f'{req.name}')
-#        print output_format.format({filename='req.name',
-#                                   success='{req.specs[0][0]}',
-#                                   error_msg='{req.specs[0][1]}'})
-#        print( json.dumps([{'Package': {'Name': req.name,
-#                                        'Operator': req.specs[0][0],
-#                                        'Version': req.specs[0][1]}
-#                                            for dependency in dependencies:
-#                                                print( json.dumps(
-#                                                      {'Dependencies':
-#                                                        {'Name': dependency.name,
-#                                                         'Operator': dependency.specs[0][0],
-#                                                         'Version': dependency.specs[0][1]}})}
-#                          ])
-#             )
+        #        print output_format.format({filename='req.name',
+        #                                   success='{req.specs[0][0]}',
+        #                                   error_msg='{req.specs[0][1]}'})
+        #        print( json.dumps([{'Package': {'Name': req.name,
+        #                                        'Operator': req.specs[0][0],
+        #                                        'Version': req.specs[0][1]}
+        #                                            for dependency in dependencies:
+        #                                                print( json.dumps(
+        #                                                      {'Dependencies':
+        #                                                        {'Name': dependency.name,
+        #                                                         'Operator': dependency.specs[0][0],
+        #                                                         'Version': dependency.specs[0][1]}})}
+        #                          ])
+        #             )
         for dependency in dependencies:
-            print(f'\t{dependency.name}{dependency.specs[0][0]}{dependency.specs[0][1]}' if dependency.specs else f'\t{dependency.name}')
-#            deps = []
-#            dep_name = (f'{dependency.name}')
-#            dep_operator = (f'{dependency.specs[0][0]}' if dependency.specs else '')
-#            dep_version = (f'{dependency.specs[0][1]}' if dependency.specs else '')
-#
-#            dep_json = {
-#                'Dependency': dep_name,
-#                'Operator': dep_operator,
-#                'Version': dep_version
-#            }
-            
+            print(
+                f'\t{dependency.name}{dependency.specs[0][0]}{dependency.specs[0][1]}' if dependency.specs else f'\t{dependency.name}')
+            #            deps = []
+            #            dep_name = (f'{dependency.name}')
+            #            dep_operator = (f'{dependency.specs[0][0]}' if dependency.specs else '')
+            #            dep_version = (f'{dependency.specs[0][1]}' if dependency.specs else '')
+            #
+            #            dep_json = {
+            #                'Dependency': dep_name,
+            #                'Operator': dep_operator,
+            #                'Version': dep_version
+            #            }
+
             # Only add new dependencies to queue
             if not dependency.name in known_packages:
                 work_queue.append(dependency)
