@@ -1,5 +1,7 @@
 import json
+import os
 import re
+import shutil
 from collections import deque
 
 import requests
@@ -13,11 +15,10 @@ from pip._internal.network.session import PipSession
 from pip._vendor.packaging.specifiers import SpecifierSet
 
 SOURCE_URL = 'https://raw.githubusercontent.com/ansible/awx/devel/requirements/requirements.txt'
-
+PACKAGES_DIR = 'packages'
 pypi_session = requests.sessions.Session()
 
 
-# unused
 def get_best_package(package_name, specifier=''):
     allow_yanked = True
     ignore_requires_python = True
@@ -36,6 +37,22 @@ def get_best_package(package_name, specifier=''):
     )
     cand = finder.find_best_candidate(package_name, SpecifierSet(specifier))
     return cand.best_candidate.name, cand.best_candidate.version, cand.best_candidate.link.url
+
+
+def download_best_package(package_name, specifier='', path=PACKAGES_DIR):
+    name, version, url = get_best_package(package_name, specifier)
+    url_split = url.split('#sha256')[0]
+    file_split = url_split.split('/')[-1]
+
+    if not os.path.exists(f'{path}/{name}'):
+       os.makedirs(f'{path}/{name}')
+
+    dest = f'{path}/{name}/{file_split}'
+    r = requests.get(url_split, allow_redirects=True)
+    open(dest, 'wb').write(r.content)
+    shutil.unpack_archive(dest, f'{path}/{package_name}')
+    extracted = dest.rstrip('.tar.gz')
+    os.rename(extracted, extracted.lower())
 
 
 def get_package_info(package):
@@ -152,11 +169,27 @@ def fetch_all_requirements_reqs():
     return condensed
 
 
-if __name__ == '__main__':
-    res = fetch_all_requirements_reqs()
+def download_all_packages(condensed=None):
+    if condensed:
+        with open(condensed, 'r') as fp:
+            condensed = json.load(fp)
+    else:
+        condensed = fetch_all_requirements_reqs()
 
-    with open('fetched_all.json', 'w') as fp:
-        json.dump(res, fp, indent=4)
+    if not os.path.exists(PACKAGES_DIR):
+        os.makedirs(PACKAGES_DIR)
+
+    for pkg in condensed.values():
+        print(f'Downloading {pkg["name"]}')
+        download_best_package(pkg['name'], specifier='=='+pkg['definite_version'])
+
+
+if __name__ == '__main__':
+    download_all_packages('out.json')
+    # res = fetch_all_requirements_reqs()
+
+    # with open('fetched_all.json', 'w') as fp:
+    #     json.dump(res, fp, indent=4)
 
     # facit = fetch_all_from_source()
     # with open('fetched_all.json', 'r') as fp:

@@ -10,6 +10,17 @@
             }
         ]
     },
+    "asciichartpy": {
+        "name": "asciichartpy",
+        "definite_version": "1.5.25",
+        "buildrequires": [
+            {
+                "name": "python36-devel",
+                "version": "",
+                "specifier": ""
+            }
+        ]
+    },
     "aiohttp": {
         "name": "aiohttp",
         "definite_version": "3.6.2",
@@ -703,6 +714,22 @@
                 "specifier": ""
             }
 	]
+    },
+    "jaraco.text": {
+        "name": "jaraco.text",
+        "definite_version": "3.2.0",
+        "buildrequires": [
+            {
+                "name": "python36-devel",
+                "version": "",
+                "specifier": ""
+            },
+            {
+                "name": "python3-setuptools_scm",
+                "version": "",
+                "specifier": ""
+            }
+        ]
     },
     "jaraco.collections": {
         "name": "jaraco.collections",

@@ -1,8 +1,15 @@
 #!/opt/rh/rh-python36/root/bin/python3
-import json
-import sys
-import subprocess
 import fileinput
+import json
+import subprocess
+
+PREFIX = 'awx-python36'
+PACKAGER = 'Sinan Sert <sis@miracle.dk>'
+
+
+
+def generate_spec_for(package_name, requiresjson):
+    pass
 
 with open('out.json') as f:
     data = json.load(f)
@@ -10,17 +17,12 @@ with open('out.json') as f:
 with open('buildrequires.json') as f:
     builddata = json.load(f)
 
-with open('parser.json') as f:
-    config = json.load(f)
-
-prefix = (config['prefix'])
-packager = (config['packager'])
-arg = sys.argv[1]
+arg = 'adal' # sys.argv[1]
 pkg_name = data[arg]
 bpkg_name = builddata[arg]
 deps = (pkg_name['dependencies'])
 bdeps = (bpkg_name['buildrequires'])
-pkg_dir = f"{pkg_name['name']}/{pkg_name['name']}-{pkg_name['definite_version']}"
+pkg_dir = f"packages/{pkg_name['name']}/{pkg_name['name']}-{pkg_name['definite_version']}"
 spec_file = f"{pkg_name['name']}/{pkg_name['name']}.spec"
 
 requires = ""
@@ -31,12 +33,13 @@ buildrequires = ""
 for bspecs in bdeps:
     buildrequires += str(f"{bspecs['name']}{bspecs['specifier']}{bspecs['version']} ")
 
+
 subprocess.run(["python3", "setup.py", "bdist_rpm", "--spec-only",
                 "--build-requires", buildrequires, "--requires",
-                requires, "--packager", packager, "--dist-dir", "../"], cwd=pkg_dir)
+                requires, "--packager", PACKAGER, "--dist-dir", "../"], cwd=pkg_dir)
 
 with fileinput.FileInput(spec_file, inplace=True) as file:
     for line in file:
-        print(line.replace("define name "+f"{pkg_name['name']}","define name "+prefix+ "-" +f"{pkg_name['name']}"), end='')
+        print(line.replace("define name "+f"{pkg_name['name']}","define name "+PREFIX+ "-" +f"{pkg_name['name']}"), end='')
 
-file.close ()
+file.close()
