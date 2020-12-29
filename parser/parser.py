@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 #!/opt/rh/rh-python36/root/bin/python3
 import fileinput
 import json
